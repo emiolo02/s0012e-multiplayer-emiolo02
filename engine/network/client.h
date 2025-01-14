@@ -22,7 +22,7 @@ namespace Net {
 
         void SendPacket(const void *data, size_t size) const;
 
-        void Poll() const;
+        void Poll(uint32 timeout = 0) const;
 
 
         void SetConnectCallback(const std::function<void(const Packet &)> &func) { m_ConnectCallback = func; }

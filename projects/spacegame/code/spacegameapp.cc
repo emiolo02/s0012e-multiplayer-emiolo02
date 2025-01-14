@@ -173,12 +173,11 @@ namespace Game {
 
         const ModelId shipModel = LoadModel("assets/space/spaceship.glb");
         const ModelId laserModel = LoadModel("assets/space/laser.glb");
-        std::unordered_map<uint32, SpaceShip> spaceShips;
-        std::unordered_map<uint32, Laser> lasers;
+
 
         SpaceShipCamera camera;
 
-        Client::SetScene(&spaceShips, &lasers);
+        Client::SetScene(&m_SpaceShips, &m_Lasers);
 
         KeyMap input;
 
@@ -231,7 +230,7 @@ namespace Game {
                 RenderDevice::Draw(asteroid.first, asteroid.second);
             }
 
-            for (auto &ship: spaceShips) {
+            for (auto &ship: m_SpaceShips) {
                 if (Client::GetId() == ship.first) {
                     camera.target = ship.second.transform.GetMatrix();
                     camera.Update(dt);
@@ -240,7 +239,7 @@ namespace Game {
                 RenderDevice::Draw(shipModel, ship.second.transform.GetMatrix());
             }
 
-            for (auto &laser: lasers) {
+            for (auto &laser: m_Lasers) {
                 laser.second.Update(dt);
                 RenderDevice::Draw(laserModel, laser.second.transform.GetMatrix());
             }
@@ -276,6 +275,11 @@ namespace Game {
     SpaceGameApp::RenderUI() {
         if (this->window->IsOpen()) {
             ImGui::Begin("Net");
+
+            for (auto &ship: m_SpaceShips) {
+                ImGui::DragFloat3("Ship position", &ship.second.transform.GetPosition()[0]);
+                ImGui::DragFloat4("Ship orientation", &ship.second.transform.GetOrientation()[0]);
+            }
 
             static bool isConnected = false;
             if (m_IsHost || isConnected) {

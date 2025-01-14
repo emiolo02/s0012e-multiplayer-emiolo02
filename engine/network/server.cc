@@ -26,13 +26,13 @@ namespace Net {
     }
 
     void
-    Server::Poll() {
+    Server::Poll(const uint32 timeout) const {
         if (!m_Active) {
             return;
         }
 
         ENetEvent event;
-        while (enet_host_service(m_Server, &event, 1) > 0) {
+        while (enet_host_service(m_Server, &event, timeout) > 0) {
             switch (event.type) {
                 case ENET_EVENT_TYPE_CONNECT: {
                     if (m_ConnectCallback) {

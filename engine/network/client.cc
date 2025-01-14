@@ -79,14 +79,14 @@ namespace Net {
     }
 
     void
-    Client::Poll() const {
+    Client::Poll(const uint32 timeout) const {
         if (!m_Active) {
             return;
         }
 
         ENetEvent event;
 
-        while (enet_host_service(m_Client, &event, 0) > 0) {
+        while (enet_host_service(m_Client, &event, timeout) > 0) {
             switch (event.type) {
                 case ENET_EVENT_TYPE_CONNECT: {
                     if (m_ConnectCallback) {

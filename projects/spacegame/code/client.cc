@@ -115,12 +115,11 @@ namespace Game {
               where.
              */
             case Protocol::PacketType_UpdatePlayerS2C: {
-                auto updatePlayer = wrapper.AsUpdatePlayerS2C();
+                LOG("Receive 'UpdatePlayer' packet\n");
+                const auto updatePlayer = wrapper.AsUpdatePlayerS2C();
                 auto &player = updatePlayer->player;
-
                 SpaceShip &ship = m_SpaceShips->at(player->uuid());
-                ship.transform.SetPosition(*(vec3 *) &player->position());
-                ship.transform.SetOrientation(*(quat *) &player->direction());
+                ship.predictedBody.SetServerData(ship.transform, *player, updatePlayer->time);
                 break;
             }
 

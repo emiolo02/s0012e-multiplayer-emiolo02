@@ -34,6 +34,8 @@ namespace Game {
 		/// show some ui things
 		void RenderUI();
 
+		std::unordered_map<uint32, SpaceShip> m_SpaceShips;
+		std::unordered_map<uint32, Laser> m_Lasers;
 		std::vector<std::pair<Render::ModelId, mat4> > m_Asteroids;
 		Display::Window *window = nullptr;
 

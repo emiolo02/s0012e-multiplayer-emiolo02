@@ -71,9 +71,12 @@ namespace Game {
         if (!init)
             return;
 
-        const mat4 transformMat = transform.GetMatrix();
+        predictedBody.Interpolate(transform, dt);
+
         const vec3 position = transform.GetPosition();
+        const mat4 transformMat = transform.GetMatrix();
         constexpr float thrusterPosOffset = 0.365f;
+
         this->particleEmitterLeft->data.origin = vec4(
             vec3(position + (vec3(transformMat[0]) * -thrusterPosOffset)) + (
                 vec3(transformMat[2]) * emitterOffset), 1);

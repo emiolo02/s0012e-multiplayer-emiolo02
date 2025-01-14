@@ -1,6 +1,7 @@
 #include "server.h"
 #include "proto.h"
 #include "packets.h"
+#include <thread>
 
 using namespace flatbuffers;
 
@@ -60,7 +61,7 @@ namespace Game {
 
         const uint64 timeStart = Time::Now();
 
-        m_Server.Poll();
+        m_Server.Poll(20);
 
         CheckCollisions();
 
@@ -75,7 +76,6 @@ namespace Game {
             auto peer = player.first;
             auto &shipState = player.second;
 
-            SetTransform(m_PlayerColliders[shipState.id], shipState.transform.GetMatrix());
 
             if (shipState.input.Space()) {
                 shipState.input.mask &= 0b1101111111;
@@ -83,6 +83,7 @@ namespace Game {
             }
 
             shipState.Update(dt);
+            SetTransform(m_PlayerColliders[shipState.id], shipState.transform.GetMatrix());
 
             auto packedPlayer = PackPlayer(shipState);
 
@@ -92,6 +93,7 @@ namespace Game {
         }
 
         RemoveLasers();
+
 
         dt = float(Time::Now() - timeStart) / 1000.0f;
     }

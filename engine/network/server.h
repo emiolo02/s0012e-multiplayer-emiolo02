@@ -15,7 +15,7 @@ namespace Net {
 
         bool Create(uint16 port);
 
-        void Poll();
+        void Poll(uint32 timeout = 0) const;
 
         void BroadCast(const uint8 *data, size_t size) const;
 

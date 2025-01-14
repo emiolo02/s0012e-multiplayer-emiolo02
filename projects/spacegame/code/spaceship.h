@@ -1,6 +1,8 @@
 #pragma once
 #include "keymap.h"
+#include "proto.h"
 #include "transform.h"
+#include "deadreckoning.h"
 
 namespace Render {
     struct ParticleEmitter;
@@ -42,6 +44,9 @@ namespace Game {
 
         uint32 id = 0;
         Transform transform;
+
+        DeadReckoning predictedBody;
+
         bool init = false;
 
         float emitterOffset = -0.5f;
