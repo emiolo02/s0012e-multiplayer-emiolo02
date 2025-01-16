@@ -61,7 +61,7 @@ namespace Game {
 
         const uint64 timeStart = Time::Now();
 
-        m_Server.Poll(20);
+        m_Server.Poll(0);
 
         CheckCollisions();
 

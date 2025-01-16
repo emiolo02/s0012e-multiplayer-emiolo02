@@ -3,34 +3,34 @@
 //------------------------------------------------------------------------------
 /**
     @file core/config.h
-    
-	Main configure file for types and OS-specific stuff.
-	
-	(C) 2015-2022 See the LICENSE file.
+
+        Main configure file for types and OS-specific stuff.
+
+        (C) 2015-2022 See the LICENSE file.
 */
-#ifdef __WIN32__
-#include "win32/pch.h"
-#endif
+// #ifdef __WIN32__
+// #include "win32/pch.h"
+// #endif
 #define NOMINMAX
 
-#include <stdint.h>
-#include <algorithm>
-#include <cstring>
-#include <atomic>
-#include <xmmintrin.h>
-#include <assert.h>
-#include <chrono>
-#include "gtx/string_cast.hpp"
-#include <vec3.hpp> // glm::vec3
-#include <vec4.hpp> // glm::vec4
-#include <mat4x4.hpp> // glm::mat4
-#include "gtc/matrix_transform.hpp" // glm::translate, glm::rotate, glm::scale, glm::perspective
-#include "gtx/transform.hpp"
-#include "gtc/quaternion.hpp"
-#include "core/debug.h"
 #include "GL/glew.h"
 #include "GL/gl.h"
+#include "core/debug.h"
+#include "gtc/matrix_transform.hpp" // glm::translate, glm::rotate, glm::scale, glm::perspective
+#include "gtc/quaternion.hpp"
+#include "gtx/string_cast.hpp"
+#include "gtx/transform.hpp"
+#include <algorithm>
+#include <assert.h>
+#include <atomic>
+#include <chrono>
+#include <cstring>
 #include <iostream>
+#include <mat4x4.hpp> // glm::mat4
+#include <stdint.h>
+#include <vec3.hpp> // glm::vec3
+#include <vec4.hpp> // glm::vec4
+#include <xmmintrin.h>
 
 using namespace glm;
 
@@ -48,12 +48,9 @@ typedef uint8_t uint8;
 typedef int8_t int8;
 typedef uint8_t uchar;
 
-// eh, windows already defines byte, so don't redefine byte if we are running windows
-#ifndef __WIN32__
 typedef uint8_t byte;
-#endif
-
 typedef uint8_t ubyte;
+
 typedef float float32;
 typedef double float64;
 
@@ -74,7 +71,11 @@ typedef double float64;
 #endif
 
 #if !defined(__GNUC__)
-#define  __attribute__(x)  /**/
+#define __attribute__(x) /**/
+#endif
+
+#ifndef M_PI
+#   define M_PI 3.14159265358979323846
 #endif
 
 #ifdef NDEBUG
@@ -84,9 +85,10 @@ typedef double float64;
 #endif
 
 struct Time {
-	static uint64 Now() {
-		const auto now = std::chrono::system_clock::now();
-		const auto duration = now.time_since_epoch();
-		return std::chrono::duration_cast<std::chrono::milliseconds>(duration).count();
-	}
+    static uint64 Now() {
+        const auto now = std::chrono::system_clock::now();
+        const auto duration = now.time_since_epoch();
+        return std::chrono::duration_cast<std::chrono::milliseconds>(duration)
+                .count();
+    }
 };

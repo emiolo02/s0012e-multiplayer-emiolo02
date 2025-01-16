@@ -11,7 +11,7 @@ namespace Net {
 
         m_Server = enet_host_create(&m_Address, 32, 1, 0, 0);
         if (!m_Server) {
-            std::cout << "Failed to create ENet client host.\n";
+            std::cout << "Failed to create ENet server host.\n";
             return false;
         }
 

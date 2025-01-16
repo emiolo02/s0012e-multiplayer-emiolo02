@@ -57,6 +57,7 @@ namespace Game {
             glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 
             RenderDevice::Init();
+            Net::Initialize();
 
             // set ui rendering function
             this->window->SetUiRender([this]() {
@@ -283,7 +284,7 @@ namespace Game {
 
             static bool isConnected = false;
             if (m_IsHost || isConnected) {
-                ImGui::Text(Client::Status());
+                ImGui::Text("%s", Client::Status());
                 if (ImGui::Button("Disconnect")) {
                     Client::Disconnect();
                 }

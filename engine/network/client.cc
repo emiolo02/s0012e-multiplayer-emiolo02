@@ -9,7 +9,8 @@ namespace Net {
         enet_host_destroy(m_Client);
     }
 
-    bool Client::Create() {
+    bool
+    Client::Create() {
         m_Client = enet_host_create(nullptr, 1, 1, 0, 0);
         if (!m_Client) {
             LOG("Failed to create ENet client host.\n");
