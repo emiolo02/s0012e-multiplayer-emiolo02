@@ -59,14 +59,17 @@ namespace Game {
             return;
         }
 
-        const uint64 timeStart = Time::Now();
+        constexpr uint updateTime = 1000 / m_UpdateFrequency;
+        constexpr float dt = 1.0f / static_cast<float>(m_UpdateFrequency);
+
+        m_CurrentTime = Time::Now();
 
         m_Server.Poll(0);
 
         CheckCollisions();
 
         for (auto &laser: m_Lasers) {
-            if (Time::Now() >= laser.second.endTime) {
+            if (m_CurrentTime >= laser.second.endTime) {
                 m_LasersToRemove.push(laser.first);
             }
             laser.second.Update(dt);
@@ -87,15 +90,16 @@ namespace Game {
 
             auto packedPlayer = PackPlayer(shipState);
 
-            const auto fbb = Packet::UpdatePlayerS2C(Time::Now(), &packedPlayer);
+            const auto fbb = Packet::UpdatePlayerS2C(m_CurrentTime, &packedPlayer);
 
             m_Server.BroadCast(fbb.GetBufferPointer(), fbb.GetSize());
         }
 
         RemoveLasers();
 
-
-        dt = float(Time::Now() - timeStart) / 1000.0f;
+        while (Time::Now() - m_CurrentTime < updateTime) {
+            // Wait.
+        }
     }
 
     void
@@ -105,7 +109,7 @@ namespace Game {
 
         // Client connect
 
-        auto fbb = Packet::ClientConnectS2C(uuid, Time::Now());
+        auto fbb = Packet::ClientConnectS2C(uuid, m_CurrentTime);
 
         m_Server.Send(packet.sender, fbb.GetBufferPointer(), fbb.GetSize());
 
@@ -161,8 +165,14 @@ namespace Game {
              */
             case Protocol::PacketType_InputC2S: {
                 const auto inputData = wrapper.AsInputC2S();
+                auto &player = m_Players[packet.sender];
 
-                m_Players[packet.sender].input = {inputData->bitmap, inputData->time};
+                // This check is to make sure a "shoot" command isn't overwritten.
+                const uint16 mask = player.input.Space()
+                                        ? inputData->bitmap | 0b0010000000
+                                        : inputData->bitmap;
+
+                player.input = {mask, inputData->time};
                 break;
             }
 
@@ -212,7 +222,7 @@ namespace Game {
         laser.id = uuid;
         laser.senderId = shipState.id;
 
-        const uint64 now = Time::Now();
+        const uint64 now = m_CurrentTime;
         laser.startTime = now;
         laser.endTime = now + 10000;
 
@@ -224,12 +234,11 @@ namespace Game {
 
     void
     Server::CheckCollisions() {
+        std::queue<uint32> playersToRespawn;
+
         for (auto &player: m_Players) {
             if (player.second.CheckCollisions()) {
-                const auto fbb = Packet::DespawnPlayerS2C(player.second.id);
-                m_Server.BroadCast(fbb.GetBufferPointer(), fbb.GetSize());
-
-                SpawnPlayer(player.second.id);
+                playersToRespawn.push(player.second.id);
             }
         }
 
@@ -253,9 +262,6 @@ namespace Game {
                     LOG("hit player\n");
                     for (auto &ship: m_Players) {
                         if (ship.second.id == playerIt->first) {
-                            const auto fbb = Packet::DespawnPlayerS2C(ship.second.id);
-                            m_Server.BroadCast(fbb.GetBufferPointer(), fbb.GetSize());
-
                             SpawnPlayer(ship.second.id);
                         }
                     }
@@ -266,6 +272,16 @@ namespace Game {
 
                 m_LasersToRemove.push(laser.first);
             }
+        }
+
+        while (!playersToRespawn.empty()) {
+            const uint32 id = playersToRespawn.front();
+            playersToRespawn.pop();
+
+            const auto fbb = Packet::DespawnPlayerS2C(id);
+            m_Server.BroadCast(fbb.GetBufferPointer(), fbb.GetSize());
+
+            SpawnPlayer(id);
         }
     }
 

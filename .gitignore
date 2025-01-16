@@ -22,7 +22,7 @@ mono_crash.*
 [Bb]uilds/
 
 # Build results
-w64build/
+win64build/
 cmake-build-debug/
 cmake-build-minsizerel/
 cmake-build-release/
@@ -50,6 +50,7 @@ imgui.ini
 
 *.obj
 *.exe
+[Bb]in/spacegame
 *.pdb
 *.ilk
 

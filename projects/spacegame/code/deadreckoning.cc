@@ -8,9 +8,9 @@
 void
 DeadReckoning::Interpolate(Transform &shipTransform, const float dt) {
     m_TimeSinceUpdate += dt;
-    Protocol::Vec3 &serverPosition = m_ServerData.state.mutable_position();
-    Protocol::Vec3 serverVelocity = m_ServerData.state.velocity();
-    Protocol::Vec3 serverAcceleration = m_ServerData.state.acceleration();
+    const Protocol::Vec3 serverPosition = m_ServerData.state.position();
+    const Protocol::Vec3 serverVelocity = m_ServerData.state.velocity();
+    const Protocol::Vec3 serverAcceleration = m_ServerData.state.acceleration();
     quat serverOrientation = *(quat *) &m_ServerData.state.direction();
 
     const float sinceUpdateSq = m_TimeSinceUpdate * m_TimeSinceUpdate;

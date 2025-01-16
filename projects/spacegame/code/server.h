@@ -50,7 +50,7 @@ namespace Game {
 
         bool m_Active = false;
 
-        float dt = 0.01667f;
+        static constexpr uint m_UpdateFrequency = 50;
 
         std::unordered_map<const ENetPeer *, SpaceShipState> m_Players;
         Physics::ColliderMeshId m_ShipColliderMesh = {};
@@ -67,5 +67,7 @@ namespace Game {
 
         Net::Server m_Server;
         uint32 m_NextEntityId = 0;
+
+        uint64 m_CurrentTime = 0;
     };
 }
