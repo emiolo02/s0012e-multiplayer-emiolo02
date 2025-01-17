@@ -100,6 +100,7 @@ namespace Game {
         while (Time::Now() - m_CurrentTime < updateTime) {
             // Wait.
         }
+        m_CurrentFrame++;
     }
 
     void

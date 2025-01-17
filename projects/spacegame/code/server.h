@@ -69,5 +69,6 @@ namespace Game {
         uint32 m_NextEntityId = 0;
 
         uint64 m_CurrentTime = 0;
+        uint32 m_CurrentFrame = 0;
     };
 }

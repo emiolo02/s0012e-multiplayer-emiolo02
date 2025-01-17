@@ -28,6 +28,13 @@ namespace Game {
     }
 
     void
+    Client::UpdateImpl() {
+        m_CurrentTime = Time::Now();
+        m_Client.Poll();
+        m_LastUpdateTime = m_CurrentTime;
+    }
+
+    void
     Client::ReceiveImpl(const Net::Packet &packet) {
         const auto wrapper = Protocol::GetPacketWrapper(&packet.data[0])->UnPack()->packet;
 
@@ -118,7 +125,9 @@ namespace Game {
                 const auto updatePlayer = wrapper.AsUpdatePlayerS2C();
                 auto &player = updatePlayer->player;
                 SpaceShip &ship = m_SpaceShips->at(player->uuid());
-                ship.predictedBody.SetServerData(ship.transform, *player, updatePlayer->time);
+
+                const uint64 latency = std::max(m_CurrentTime - m_LastUpdateTime, m_CurrentTime - updatePlayer->time);
+                ship.predictedBody.SetServerData(ship.transform, *player, latency);
                 break;
             }
 

@@ -193,13 +193,15 @@ namespace Game {
             }
         });
         serverThread.detach();
+        uint32 currentFrame = 0;
 
         // game loop
         while (isOpen) {
             auto timeStart = std::chrono::steady_clock::now();
 
             //Server::Update();
-            Client::Update();
+            if (currentFrame % 10 == 0)
+                Client::Update();
 
             glClear(GL_DEPTH_BUFFER_BIT);
             glEnable(GL_DEPTH_TEST);
@@ -250,6 +252,7 @@ namespace Game {
 
             // transfer new frame to window
             this->window->SwapBuffers();
+            currentFrame++;
 
             auto timeEnd = std::chrono::steady_clock::now();
             dt = std::min(0.04, std::chrono::duration<double>(timeEnd - timeStart).count());

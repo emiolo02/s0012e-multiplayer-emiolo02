@@ -12,8 +12,10 @@ public:
 private:
     struct ServerData {
         Protocol::Player state = {};
-        uint64 time = 0;
-    } m_ServerData;
+        uint64 latency = 0;
+    };
+
+    ServerData m_ServerData, m_LastServerData;
 
     float m_TimeSinceUpdate = 0.0f;
 };

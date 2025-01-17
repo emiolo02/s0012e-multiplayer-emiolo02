@@ -1,4 +1,5 @@
 #pragma once
+#include "packets.h"
 #include "network/network.h"
 #include "spaceship.h"
 
@@ -9,7 +10,7 @@ namespace Game {
 
         static void Send(const uint8 *data, const size_t size) { s_Instance.m_Client.SendPacket(data, size); }
 
-        static void Update() { s_Instance.m_Client.Poll(); }
+        static void Update() { s_Instance.UpdateImpl(); }
 
         static void Connect(const char *ip, uint16 port);
 
@@ -26,6 +27,8 @@ namespace Game {
         }
 
     private:
+        void UpdateImpl();
+
         static void Receive(const Net::Packet &packet) { s_Instance.ReceiveImpl(packet); }
 
         void ReceiveImpl(const Net::Packet &packet);
@@ -38,5 +41,8 @@ namespace Game {
         std::unordered_map<uint32, Laser> *m_Lasers = nullptr;
         uint32 m_ClientId = 0;
         Net::Client m_Client;
+
+        uint64 m_CurrentTime = 0;
+        uint64 m_LastUpdateTime = 0;
     };
 }

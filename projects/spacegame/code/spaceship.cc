@@ -108,7 +108,7 @@ namespace Game {
             this->currentSpeed = 0;
         }
 
-        vec3 desiredVelocity(0, 0, this->currentSpeed);
+        vec3 desiredVelocity(0, 0, this->currentSpeed * 10.0f);
         desiredVelocity = transform.GetMatrix() * vec4(desiredVelocity, 0.0f);
 
         this->linearVelocity = mix(this->linearVelocity, desiredVelocity, dt * accelerationFactor);
@@ -117,7 +117,7 @@ namespace Game {
         const float rotY = input.Up() ? -1.0f : input.Down() ? 1.0f : 0.0f;
         const float rotZ = input.A() ? -1.0f : input.D() ? 1.0f : 0.0f;
 
-        transform.AddPosition(this->linearVelocity * dt * 10.0f);
+        transform.AddPosition(this->linearVelocity * dt);
 
         const float rotationSpeed = 1.8f * dt;
         rotXSmooth = mix(rotXSmooth, rotX * rotationSpeed, dt * smoothFactor);
