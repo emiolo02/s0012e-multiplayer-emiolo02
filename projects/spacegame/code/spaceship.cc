@@ -27,7 +27,11 @@ namespace Game {
         Camera *cam = CameraManager::GetCamera(CAMERA_MAIN);
         const vec3 targetPosition(target[3]);
         const vec3 desiredCamPos = targetPosition + vec3(target * vec4(0, camOffsetY, -4.0f, 0));
-        position = mix(position, desiredCamPos, dt * cameraSmoothFactor);
+
+        const vec3 tmp = mix(position, desiredCamPos, dt * cameraSmoothFactor);
+        if (!isnan(tmp.x))
+            position = tmp;
+
         cam->view = lookAt(position, position + vec3(target[2]), vec3(target[1]));
     }
 

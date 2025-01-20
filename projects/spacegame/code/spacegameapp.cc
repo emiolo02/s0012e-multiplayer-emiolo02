@@ -200,8 +200,8 @@ namespace Game {
             auto timeStart = std::chrono::steady_clock::now();
 
             //Server::Update();
-            if (currentFrame % 10 == 0)
-                Client::Update();
+            //if (currentFrame % 40 == 0)
+            Client::Update();
 
             glClear(GL_DEPTH_BUFFER_BIT);
             glEnable(GL_DEPTH_TEST);

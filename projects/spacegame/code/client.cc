@@ -126,8 +126,8 @@ namespace Game {
                 auto &player = updatePlayer->player;
                 SpaceShip &ship = m_SpaceShips->at(player->uuid());
 
-                const uint64 latency = std::max(m_CurrentTime - m_LastUpdateTime, m_CurrentTime - updatePlayer->time);
-                ship.predictedBody.SetServerData(ship.transform, *player, latency);
+                //const uint64 latency = std::max(m_CurrentTime - m_LastUpdateTime, m_CurrentTime - updatePlayer->time);
+                ship.predictedBody.SetServerData(ship.transform, *player, updatePlayer->time);
                 break;
             }
 
@@ -163,7 +163,7 @@ namespace Game {
                 laser.endTime = laserPacket->end_time();
 
                 // Sync the laser with the server
-                const float dt = float(Time::Now() - laserPacket->start_time()) / 1000.0f;
+                const float dt = float(m_CurrentTime - laserPacket->start_time()) / 1000.0f;
                 laser.Update(dt);
                 break;
             }

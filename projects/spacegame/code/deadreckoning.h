@@ -5,13 +5,14 @@
 
 class DeadReckoning {
 public:
-    void SetServerData(Transform &shipTransform, const Protocol::Player &state, uint64 time);
+    void SetServerData(Transform &shipTransform, const Protocol::Player &state, uint64 serverTime);
 
     void Interpolate(Transform &shipTransform, float dt);
 
 private:
     struct ServerData {
         Protocol::Player state = {};
+        uint64 time = 0;
         uint64 latency = 0;
     };
 

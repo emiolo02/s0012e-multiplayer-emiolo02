@@ -4,7 +4,9 @@
 
 void
 DeadReckoning::Interpolate(Transform &shipTransform, const float dt) {
-    m_TimeSinceUpdate += dt;
+    const float latency = static_cast<float>(m_ServerData.latency) / 1000.0f;
+    const float normalT = m_TimeSinceUpdate / latency;
+    m_TimeSinceUpdate = m_TimeSinceUpdate >= latency ? latency : m_TimeSinceUpdate + dt;
 
     const vec3 serverPosition = *(vec3 *) &m_ServerData.state.position();
     const vec3 serverVelocity = *(vec3 *) &m_ServerData.state.velocity();
@@ -16,9 +18,8 @@ DeadReckoning::Interpolate(Transform &shipTransform, const float dt) {
     const vec3 lastServerAcceleration = *(vec3 *) &m_LastServerData.state.acceleration();
     const quat lastServerOrientation = *(quat *) &m_LastServerData.state.direction();
 
-    const float latency = static_cast<float>(m_ServerData.latency) / 1000.0f;
-    const float normalT = clamp(m_TimeSinceUpdate / latency, 0.0f, 1.0f);
-    LOG(normalT << '\n');
+    //LOG(normalT << '\n');
+    LOG(latency << '\n');
 
     const float halfTimeSinceUpdateSq = m_TimeSinceUpdate * m_TimeSinceUpdate * 0.5f;
 
@@ -41,12 +42,17 @@ DeadReckoning::Interpolate(Transform &shipTransform, const float dt) {
 }
 
 void
-DeadReckoning::SetServerData(Transform &shipTransform, const Protocol::Player &state, const uint64 time) {
+DeadReckoning::SetServerData(Transform &shipTransform, const Protocol::Player &state, const uint64 serverTime) {
     //LOG("Set server data.\n");
+    //if (m_ServerData.time == serverTime) {
+    //    return;
+    //}
+
     m_LastServerData = m_ServerData;
-    m_ServerData = {state, time};
+    m_ServerData = {state, serverTime, Time::Now() - serverTime};
+    //LOG(serverTime << '\n');
     m_TimeSinceUpdate = 0.0f;
 
-    shipTransform.SetPosition(*(vec3 *) &state.position());
-    shipTransform.SetOrientation(*(quat *) &state.direction());
+    //shipTransform.SetPosition(*(vec3 *) &state.position());
+    //shipTransform.SetOrientation(*(quat *) &state.direction());
 }
