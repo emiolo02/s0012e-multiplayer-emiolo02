@@ -7,6 +7,8 @@
 
 
 namespace Game {
+    typedef uint32 EntityId;
+
     struct SpawnPoint {
         uint32 playerId = 0;
         vec3 point = vec3();
@@ -46,18 +48,19 @@ namespace Game {
 
         void RemoveLasers();
 
-        void SpawnPlayer(uint32 id);
+        void SpawnPlayer(EntityId id);
 
         bool m_Active = false;
 
         static constexpr uint m_UpdateFrequency = 50;
 
-        std::unordered_map<const ENetPeer *, SpaceShipState> m_Players;
+        std::unordered_map<const ENetPeer *, EntityId> m_Connections;
+        std::unordered_map<EntityId, SpaceShipState> m_Players;
         Physics::ColliderMeshId m_ShipColliderMesh = {};
-        std::unordered_map<uint32, Physics::ColliderId> m_PlayerColliders;
+        std::unordered_map<EntityId, Physics::ColliderId> m_PlayerColliders;
 
-        std::unordered_map<uint32, Laser> m_Lasers;
-        std::queue<uint32> m_LasersToRemove;
+        std::unordered_map<EntityId, Laser> m_Lasers;
+        std::queue<EntityId> m_LasersToRemove;
 
         std::vector<Physics::ColliderId> m_AsteroidColliders;
 
@@ -66,10 +69,19 @@ namespace Game {
         static Server s_Instance;
 
         Net::Server m_Server;
-        uint32 m_NextEntityId = 0;
+        EntityId m_NextEntityId = 0;
 
         uint64 m_CurrentTime = 0;
 
         uint32 m_CurrentFrame = 0;
+
+        std::queue<Protocol::Player> m_SpawnPlayerPackets;
+        std::queue<EntityId> m_DespawnPlayerPackets;
+        std::queue<EntityId> m_RespawnPlayerPackets;
+
+        std::queue<Protocol::Laser> m_SpawnLaserPackets;
+        std::queue<EntityId> m_DespawnLaserPackets;
+
+        std::queue<std::pair<EntityId, EntityId> > m_CollisionPackets;
     };
 }

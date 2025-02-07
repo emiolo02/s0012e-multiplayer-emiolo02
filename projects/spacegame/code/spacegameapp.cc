@@ -16,7 +16,6 @@
 #include "render/debugrender.h"
 #include "core/random.h"
 #include "input/inputserver.h"
-#include "core/cvar.h"
 #include "render/physics.h"
 #include <chrono>
 #include <flatbuffers/flatbuffers.h>
@@ -32,16 +31,12 @@ namespace Game {
     //------------------------------------------------------------------------------
     /**
     */
-    SpaceGameApp::SpaceGameApp() {
-        // empty
-    }
+    SpaceGameApp::SpaceGameApp() = default;
 
     //------------------------------------------------------------------------------
     /**
     */
-    SpaceGameApp::~SpaceGameApp() {
-        // empty
-    }
+    SpaceGameApp::~SpaceGameApp() = default;
 
     //------------------------------------------------------------------------------
     /**
@@ -182,7 +177,7 @@ namespace Game {
 
         KeyMap input;
 
-        double dt = 0.01667f;
+        float dt = 0.01667f;
         glfwSwapInterval(1);
 
         bool isOpen = window->IsOpen();
@@ -215,16 +210,8 @@ namespace Game {
             }
 
             if (input.Set(kbd)) {
-                flatbuffers::FlatBufferBuilder builder;
-                auto inputC2S = Protocol::CreateInputC2S(builder, input.timeSet, input.mask);
-                auto packetWrapper = Protocol::CreatePacketWrapper(
-                    builder,
-                    Protocol::PacketType_InputC2S,
-                    inputC2S.Union()
-                );
-                builder.Finish(packetWrapper);
-
-                Client::Send(builder.GetBufferPointer(), builder.GetSize());
+                auto fbb = Packet::InputC2S(input.timeSet, input.mask);
+                Client::Send(fbb.GetBufferPointer(), fbb.GetSize());
             }
 
 
@@ -237,6 +224,9 @@ namespace Game {
                 if (Client::GetId() == ship.first) {
                     camera.target = ship.second.transform.GetMatrix();
                     camera.Update(dt);
+                    ship.second.UserUpdate(input, dt);
+                } else {
+                    ship.second.Interpolate(dt);
                 }
                 ship.second.Update(dt);
                 RenderDevice::Draw(shipModel, ship.second.transform.GetMatrix());
@@ -255,7 +245,7 @@ namespace Game {
             currentFrame++;
 
             auto timeEnd = std::chrono::steady_clock::now();
-            dt = std::min(0.04, std::chrono::duration<double>(timeEnd - timeStart).count());
+            dt = std::min(0.04f, std::chrono::duration<float>(timeEnd - timeStart).count());
 
             if (kbd->pressed[Input::Key::Code::Escape])
                 this->Exit();

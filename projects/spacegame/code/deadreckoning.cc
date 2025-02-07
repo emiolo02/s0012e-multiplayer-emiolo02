@@ -4,9 +4,12 @@
 
 void
 DeadReckoning::Interpolate(Transform &shipTransform, const float dt) {
-    const float latency = static_cast<float>(m_ServerData.latency) / 1000.0f;
-    const float normalT = m_TimeSinceUpdate / latency;
-    m_TimeSinceUpdate = m_TimeSinceUpdate >= latency ? latency : m_TimeSinceUpdate + dt;
+    const float timeBetweenUpdates = static_cast<float>(m_ServerData.timeReceived - m_LastServerData.timeReceived)
+                                     / 1000.0f;
+    //m_TimeSinceUpdate = m_TimeSinceUpdate >= timeBetweenUpdates ? timeBetweenUpdates : m_TimeSinceUpdate + dt;
+    m_TimeSinceUpdate += dt;
+
+    const float normalT = m_TimeSinceUpdate / timeBetweenUpdates;
 
     const vec3 serverPosition = *(vec3 *) &m_ServerData.state.position();
     const vec3 serverVelocity = *(vec3 *) &m_ServerData.state.velocity();
@@ -19,39 +22,45 @@ DeadReckoning::Interpolate(Transform &shipTransform, const float dt) {
     const quat lastServerOrientation = *(quat *) &m_LastServerData.state.direction();
 
     //LOG(normalT << '\n');
-    LOG(latency << '\n');
+    //LOG(timeBetweenUpdates / dt << '\n');
 
     const float halfTimeSinceUpdateSq = m_TimeSinceUpdate * m_TimeSinceUpdate * 0.5f;
 
     const vec3 blendVelocity = mix(lastServerVelocity, serverVelocity, normalT);
     const vec3 prevProjection = lastServerPosition
-                                + blendVelocity * m_TimeSinceUpdate
-                                + lastServerAcceleration * halfTimeSinceUpdateSq;
+                                + blendVelocity * m_TimeSinceUpdate;
 
     const vec3 latestProjection = serverPosition
-                                  + serverVelocity * m_TimeSinceUpdate
-                                  + serverAcceleration * halfTimeSinceUpdateSq;
+                                  + serverVelocity * m_TimeSinceUpdate;
 
     shipTransform.SetPosition(mix(prevProjection, latestProjection, normalT));
 
     shipTransform.SetOrientation(mix(lastServerOrientation, serverOrientation, normalT));
 
-    //Debug::DrawDebugText("#######", serverPosition, vec4(1.0f, 1.0f, 1.0f, 1.0f));
+    Debug::DrawDebugText("@@@@@@@", lastServerPosition, vec4(1.0f, 1.0f, 1.0f, 1.0f));
+    Debug::DrawDebugText("#######", serverPosition, vec4(1.0f, 1.0f, 1.0f, 1.0f));
     //LOG(glm::to_string(*(vec3*)&serverVelocity) << '\n');
     //LOG(m_TimeSinceUpdate << '\n');
 }
 
 void
-DeadReckoning::SetServerData(Transform &shipTransform, const Protocol::Player &state, const uint64 serverTime) {
+DeadReckoning::SetServerData(Transform &shipTransform, const Protocol::Player &state, const uint64 serverTime,
+                             const uint64 timeReceived) {
     //LOG("Set server data.\n");
     //if (m_ServerData.time == serverTime) {
     //    return;
     //}
+    if (m_ServerData.timeReceived >= timeReceived) {
+        return;
+    }
 
     m_LastServerData = m_ServerData;
-    m_ServerData = {state, serverTime, Time::Now() - serverTime};
+    m_ServerData = {state, serverTime, timeReceived};
     //LOG(serverTime << '\n');
     m_TimeSinceUpdate = 0.0f;
+    const float timeBetweenUpdates = static_cast<float>(m_ServerData.timeReceived - m_LastServerData.timeReceived);
+    assert(timeBetweenUpdates != 0);
+    Interpolate(shipTransform, 0.0f);
 
     //shipTransform.SetPosition(*(vec3 *) &state.position());
     //shipTransform.SetOrientation(*(quat *) &state.direction());

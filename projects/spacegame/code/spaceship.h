@@ -3,6 +3,7 @@
 #include "proto.h"
 #include "transform.h"
 #include "deadreckoning.h"
+#include "render/physics.h"
 
 namespace Render {
     struct ParticleEmitter;
@@ -22,7 +23,7 @@ namespace Game {
         Transform transform;
         vec3 origin;
         vec3 direction;
-        const float speed = 20.0f;
+        const float speed = 50.0f;
     };
 
     struct SpaceShipCamera {
@@ -36,16 +37,26 @@ namespace Game {
 
     // The in game representation of the space ship
     struct SpaceShip {
+        SpaceShip() = default;
+
+        SpaceShip(uint32 uuid);
+
         ~SpaceShip();
 
         void Init();
 
         void Update(float dt);
 
+        void UserUpdate(KeyMap input, float dt);
+
+        void Interpolate(float dt);
+
+        void SetServerData(const Protocol::Player &data, uint64 time);
+
         uint32 id = 0;
         Transform transform;
+        vec3 velocity = vec3();
 
-        DeadReckoning predictedBody;
 
         bool init = false;
 
@@ -54,7 +65,22 @@ namespace Game {
         Render::ParticleEmitter *particleEmitterRight = nullptr;
 
     private:
-        vec3 prevPos = vec3(0);
+        float timeSinceUpdate = 0.0f;
+        uint64 lastServerUpdate = 0;
+        uint64 currentServerUpdate = 0;
+
+        Transform transformStart;
+        vec3 velocityStart = vec3();
+        Protocol::Player serverState;
+
+
+        const float normalSpeed = 1.0f;
+        const float boostSpeed = normalSpeed * 2.0f;
+        float currentSpeed = 0;
+        float rotationZ = 0;
+        float rotXSmooth = 0;
+        float rotYSmooth = 0;
+        float rotZSmooth = 0;
     };
 
     // Server side representation of the space ship

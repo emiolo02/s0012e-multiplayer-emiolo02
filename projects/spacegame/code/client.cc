@@ -93,9 +93,8 @@ namespace Game {
                 LOG("Receive 'SpawnPlayer' packet\n");
                 auto &player = wrapper.AsSpawnPlayerS2C()->player;
                 //m_SpaceShips->at(player->uuid()) = SpaceShip();
-                m_SpaceShips->emplace(player->uuid(), SpaceShip());
+                m_SpaceShips->emplace(player->uuid(), player->uuid());
                 SpaceShip &ship = m_SpaceShips->at(player->uuid());
-                ship.id = player->uuid();
                 ship.transform.SetPosition(*(vec3 *) &player->position());
                 ship.transform.SetOrientation(*(quat *) &player->direction());
                 ship.Init();
@@ -124,10 +123,13 @@ namespace Game {
             case Protocol::PacketType_UpdatePlayerS2C: {
                 const auto updatePlayer = wrapper.AsUpdatePlayerS2C();
                 auto &player = updatePlayer->player;
+                if (!m_SpaceShips->contains(player->uuid())) break;
+
                 SpaceShip &ship = m_SpaceShips->at(player->uuid());
 
                 //const uint64 latency = std::max(m_CurrentTime - m_LastUpdateTime, m_CurrentTime - updatePlayer->time);
-                ship.predictedBody.SetServerData(ship.transform, *player, updatePlayer->time);
+                ship.SetServerData(*player, m_CurrentTime);
+                //LOG(m_CurrentTime << "Receive update player packet.\n");
                 break;
             }
 

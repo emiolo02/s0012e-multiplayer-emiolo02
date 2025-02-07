@@ -35,6 +35,10 @@ namespace Game {
         cam->view = lookAt(position, position + vec3(target[2]), vec3(target[1]));
     }
 
+    SpaceShip::SpaceShip(const uint32 uuid)
+        : id(uuid) {
+    }
+
     SpaceShip::~SpaceShip() {
         delete particleEmitterLeft;
         delete particleEmitterRight;
@@ -72,10 +76,7 @@ namespace Game {
     }
 
     void SpaceShip::Update(const float dt) {
-        if (!init)
-            return;
-
-        predictedBody.Interpolate(transform, dt);
+        if (!init) return;
 
         const vec3 position = transform.GetPosition();
         const mat4 transformMat = transform.GetMatrix();
@@ -90,19 +91,119 @@ namespace Game {
                 vec3(transformMat[2]) * emitterOffset), 1);
         this->particleEmitterRight->data.dir = vec4(vec3(-transformMat[2]), 0);
 
-        const float speed = distance(position, prevPos) / 10.0f * dt;
+        const float speed = length(velocity) / 10.0f * dt;
         this->particleEmitterLeft->data.startSpeed = 1.2f + (3.0f * speed);
         this->particleEmitterLeft->data.endSpeed = 0.0f + (3.0f * speed);
         this->particleEmitterRight->data.startSpeed = 1.2f + (3.0f * speed);
         this->particleEmitterRight->data.endSpeed = 0.0f + (3.0f * speed);
         //this->particleEmitter->data.decayTime = 0.16f;//+ (0.01f  * t);
         //this->particleEmitter->data.randomTimeOffsetDist = 0.06f;/// +(0.01f * t);
+    }
 
-        prevPos = position;
+    void
+    SpaceShip::UserUpdate(const KeyMap input, const float dt) {
+        if (!init) return;
+
+        if (input.W()) {
+            if (input.Shift())
+                this->currentSpeed = mix(this->currentSpeed, this->boostSpeed, std::min(1.0f, dt * 30.0f));
+            else
+                this->currentSpeed = mix(this->currentSpeed, this->normalSpeed, std::min(1.0f, dt * 90.0f));
+        } else {
+            this->currentSpeed = 0;
+        }
+
+        vec3 desiredVelocity(0, 0, this->currentSpeed * 10.0f);
+        desiredVelocity = transform.GetMatrix() * vec4(desiredVelocity, 0.0f);
+
+        velocity = mix(velocity, desiredVelocity, dt);
+
+        const float rotX = input.Left() ? 1.0f : input.Right() ? -1.0f : 0.0f;
+        const float rotY = input.Up() ? -1.0f : input.Down() ? 1.0f : 0.0f;
+        const float rotZ = input.A() ? -1.0f : input.D() ? 1.0f : 0.0f;
+
+        transform.AddPosition(velocity * dt);
+
+        constexpr float smoothFactor = 10.0f;
+
+        const float rotationSpeed = 1.8f * dt;
+        rotXSmooth = mix(rotXSmooth, rotX * rotationSpeed, dt * smoothFactor);
+        rotYSmooth = mix(rotYSmooth, rotY * rotationSpeed, dt * smoothFactor);
+        rotZSmooth = mix(rotZSmooth, rotZ * rotationSpeed, dt * smoothFactor);
+        quat localOrientation = quat(vec3(-rotYSmooth, rotXSmooth, rotZSmooth));
+        this->rotationZ -= rotXSmooth;
+        this->rotationZ = clamp(this->rotationZ, -45.0f, 45.0f);
+
+        transform.SetOrientation(transform.GetOrientation() * localOrientation);
+        //mat4 T = translate(this->position) * (mat4) this->orientation;
+        transform.GetMatrix() *= mat4(quat(vec3(0, 0, rotationZ)));
+        this->rotationZ = mix(this->rotationZ, 0.0f, dt * smoothFactor);
+
+        const vec3 &position = transform.GetPosition();
+        const quat &orientation = transform.GetOrientation();
+        const vec3 &lastKnownPosition = *(vec3 *) &serverState.position();
+        const quat &lastKnownDirection = *(quat *) &serverState.direction();
+        const vec3 &lastKnownVelocity = *(vec3 *) &serverState.velocity();
+
+        // Smoothly blend between client prediction and predicted server data
+        const vec3 latestProjection = lastKnownPosition
+                                      + lastKnownVelocity * timeSinceUpdate;
+        transform.SetPosition(mix(position, latestProjection,
+                                  timeSinceUpdate * distance(position, latestProjection) * 0.5f));
+        transform.SetOrientation(mix(orientation, lastKnownDirection, timeSinceUpdate * 0.1f));
+        //LOG(timeSinceUpdate << '\n');
+        timeSinceUpdate += dt;
+    }
+
+    void
+    SpaceShip::Interpolate(const float dt) {
+        if (!init) return;
+        if (currentServerUpdate == 0 || lastServerUpdate == 0) return;
+
+        const float timeBetweenUpdates = static_cast<float>(currentServerUpdate - lastServerUpdate) / 1000.0f;
+
+        const float normalT = timeSinceUpdate / timeBetweenUpdates;
+        timeSinceUpdate = timeSinceUpdate > timeBetweenUpdates ? timeBetweenUpdates : timeSinceUpdate + dt;
+
+        const vec3 &lastKnownPosition = *(vec3 *) &serverState.position();
+        const vec3 &lastKnownVelocity = *(vec3 *) &serverState.velocity();
+        const quat &lastKnownDirection = *(quat *) &serverState.direction();
+
+
+        assert(timeBetweenUpdates != 0);
+
+        const vec3 blendVelocity = mix(velocityStart, lastKnownVelocity, normalT);
+        const vec3 prevProjection = transformStart.GetPosition()
+                                    + blendVelocity * timeSinceUpdate;
+
+        const vec3 latestProjection = lastKnownPosition
+                                      + lastKnownVelocity * timeSinceUpdate;
+
+        transform.SetPosition(mix(prevProjection, latestProjection, normalT));
+
+        transform.SetOrientation(mix(transformStart.GetOrientation(), lastKnownDirection, normalT));
+
+        velocity = blendVelocity;
+    }
+
+    void
+    SpaceShip::SetServerData(const Protocol::Player &data, const uint64 time) {
+        if (currentServerUpdate >= time) return;
+
+        lastServerUpdate = currentServerUpdate;
+        currentServerUpdate = time;
+
+        transformStart = transform;
+        velocityStart = velocity;
+        serverState = data;
+        timeSinceUpdate = 0.0f;
+
+        Interpolate(0.0f);
     }
 
     void
     SpaceShipState::Update(const float dt) {
+        Debug::DrawDebugText("REAL POSITION", transform.GetPosition(), vec4(1));
         if (input.W()) {
             if (input.Shift())
                 this->currentSpeed = mix(this->currentSpeed, this->boostSpeed, std::min(1.0f, dt * 30.0f));
@@ -149,7 +250,6 @@ namespace Game {
 
             // debug draw collision rays
             // Debug::DrawLine(pos, pos + dir * len, 1.0f, glm::vec4(0, 1, 0, 1), glm::vec4(0, 1, 0, 1), Debug::RenderMode::AlwaysOnTop);
-
             if (payload.hit) {
                 Debug::DrawDebugText("HIT", payload.hitPoint, vec4(1, 1, 1, 1));
                 hit = true;

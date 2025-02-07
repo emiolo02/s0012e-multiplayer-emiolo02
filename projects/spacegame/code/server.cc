@@ -71,6 +71,7 @@ namespace Game {
         for (auto &laser: m_Lasers) {
             if (m_CurrentTime >= laser.second.endTime) {
                 m_LasersToRemove.push(laser.first);
+                m_DespawnLaserPackets.push(laser.first);
             }
             laser.second.Update(dt);
         }
@@ -87,15 +88,62 @@ namespace Game {
 
             shipState.Update(dt);
             SetTransform(m_PlayerColliders[shipState.id], shipState.transform.GetMatrix());
-
-            auto packedPlayer = PackPlayer(shipState);
-
-            const auto fbb = Packet::UpdatePlayerS2C(m_CurrentTime, &packedPlayer);
-
-            m_Server.BroadCast(fbb.GetBufferPointer(), fbb.GetSize());
         }
 
         RemoveLasers();
+
+        // Only publish state every 10 updates. (5 times / s)
+        if (m_CurrentFrame % 10 == 0) {
+            // Send packets.
+
+            while (!m_SpawnPlayerPackets.empty()) {
+                const auto fbb = Packet::SpawnPlayerS2C(&m_SpawnPlayerPackets.front());
+                m_Server.BroadCast(fbb.GetBufferPointer(), fbb.GetSize());
+                m_SpawnPlayerPackets.pop();
+            }
+
+            while (!m_DespawnPlayerPackets.empty()) {
+                const auto fbb = Packet::DespawnPlayerS2C(m_DespawnPlayerPackets.front());
+                m_Server.BroadCast(fbb.GetBufferPointer(), fbb.GetSize());
+                m_DespawnPlayerPackets.pop();
+            }
+
+            while (!m_RespawnPlayerPackets.empty()) {
+                const EntityId respawnId = m_RespawnPlayerPackets.front();
+                const auto fbb = Packet::DespawnPlayerS2C(respawnId);
+                m_Server.BroadCast(fbb.GetBufferPointer(), fbb.GetSize());
+
+                m_RespawnPlayerPackets.pop();
+
+                SpawnPlayer(respawnId);
+            }
+
+            while (!m_SpawnLaserPackets.empty()) {
+                const auto fbb = Packet::SpawnLaserS2C(&m_SpawnLaserPackets.front());
+                m_Server.BroadCast(fbb.GetBufferPointer(), fbb.GetSize());
+                m_SpawnLaserPackets.pop();
+            }
+
+            while (!m_DespawnLaserPackets.empty()) {
+                const auto fbb = Packet::DespawnLaserS2C(m_DespawnLaserPackets.front());
+                m_Server.BroadCast(fbb.GetBufferPointer(), fbb.GetSize());
+                m_DespawnLaserPackets.pop();
+            }
+
+            while (!m_CollisionPackets.empty()) {
+                const auto &collision = m_CollisionPackets.front();
+                const auto fbb = Packet::CollisionS2C(collision.first, collision.second);
+                m_Server.BroadCast(fbb.GetBufferPointer(), fbb.GetSize());
+                m_CollisionPackets.pop();
+            }
+
+            // Update players.
+            for (const auto &player: m_Players) {
+                auto packedPlayer = PackPlayer(player.second);
+                const auto fbb = Packet::UpdatePlayerS2C(m_CurrentTime, &packedPlayer);
+                m_Server.BroadCast(fbb.GetBufferPointer(), fbb.GetSize());
+            }
+        }
 
         while (Time::Now() - m_CurrentTime < updateTime) {
             // Wait.
@@ -106,9 +154,10 @@ namespace Game {
     void
     Server::ConnectImpl(const Net::Packet &packet) {
         LOG(IP_STREAM(packet.sender->address.host) << " connected to the server\n");
-        const uint32 uuid = m_NextEntityId++;
+        const EntityId uuid = m_NextEntityId++;
 
         // Client connect
+        m_Connections[packet.sender] = uuid;
 
         auto fbb = Packet::ClientConnectS2C(uuid, m_CurrentTime);
 
@@ -148,7 +197,6 @@ namespace Game {
                 break;
             }
         }
-        m_Players[packet.sender].id = uuid;
 
         SpawnPlayer(uuid);
     }
@@ -166,7 +214,7 @@ namespace Game {
              */
             case Protocol::PacketType_InputC2S: {
                 const auto inputData = wrapper.AsInputC2S();
-                auto &player = m_Players[packet.sender];
+                auto &player = m_Players[m_Connections[packet.sender]];
 
                 // This check is to make sure a "shoot" command isn't overwritten.
                 const uint16 mask = player.input.Space()
@@ -197,14 +245,15 @@ namespace Game {
     void
     Server::DisconnectImpl(const Net::Packet &packet) {
         LOG("Player disconnected\n");
-        const auto disconnectedPlayer = m_Players[packet.sender];
+        const EntityId disconnectedId = m_Connections[packet.sender];
 
-        m_PlayerColliders.erase(disconnectedPlayer.id);
+        m_PlayerColliders.erase(disconnectedId);
 
-        const auto fbb = Packet::DespawnPlayerS2C(disconnectedPlayer.id);
+        const auto fbb = Packet::DespawnPlayerS2C(disconnectedId);
         m_Server.BroadCast(fbb.GetBufferPointer(), fbb.GetSize());
 
-        m_Players.erase(packet.sender);
+        m_Players.erase(disconnectedId);
+        m_Connections.erase(packet.sender);
     }
 
     void
@@ -227,22 +276,23 @@ namespace Game {
         laser.startTime = now;
         laser.endTime = now + 10000;
 
+        m_SpawnLaserPackets.push(PackLaser(laser));
         //FlatBufferBuilder builder;
-        const auto packedLaser = PackLaser(laser);
-        const auto fbb = Packet::SpawnLaserS2C(&packedLaser);
-        m_Server.BroadCast(fbb.GetBufferPointer(), fbb.GetSize());
+        //const auto packedLaser = PackLaser(laser);
+        //const auto fbb = Packet::SpawnLaserS2C(&packedLaser);
+        //m_Server.BroadCast(fbb.GetBufferPointer(), fbb.GetSize());
     }
 
     void
     Server::CheckCollisions() {
-        std::queue<uint32> playersToRespawn;
-
+        // Player vs player & player vs asteroid collision
         for (auto &player: m_Players) {
             if (player.second.CheckCollisions()) {
-                playersToRespawn.push(player.second.id);
+                m_RespawnPlayerPackets.push(player.first);
             }
         }
 
+        // Laser collisions
         for (auto &laser: m_Lasers) {
             Transform &laserTransform = laser.second.transform;
             const vec3 rayStart = laserTransform.GetPosition() - laser.second.direction * 0.5f;
@@ -257,51 +307,57 @@ namespace Game {
                     if (playerIt->second == payload.collider)
                         break;
                 }
-
-                if (playerIt != m_PlayerColliders.end() && playerIt->first != laser.second.senderId) {
-                    // Hit player
-                    LOG("hit player\n");
-                    for (auto &ship: m_Players) {
-                        if (ship.second.id == playerIt->first) {
-                            SpawnPlayer(ship.second.id);
-                        }
-                    }
+                if (playerIt == m_PlayerColliders.end()) {
+                    // hit asteroid
                 } else {
-                    // Hit asteroid
-                    LOG("hit asteroid\n");
+                    // hit player
+                    if (laser.second.senderId == playerIt->first) {
+                        continue; // ignore collisions with sender.
+                    }
+                    m_CollisionPackets.push({laser.first, playerIt->first});
+                    m_RespawnPlayerPackets.push(playerIt->first);
                 }
+
+                //if (m_Players.contains(playerIt->first))
+                //if (playerIt != m_PlayerColliders.end() && playerIt->first != laser.second.senderId) {
+                //    // Hit player
+                //    for (auto &ship: m_Players) {
+                //        if (ship.second.id == playerIt->first) {
+                //            SpawnPlayer(ship.second.id);
+                //        }
+                //    }
+                //} else {
+                //    // Hit asteroid
+                //}
 
                 m_LasersToRemove.push(laser.first);
             }
         }
 
-        while (!playersToRespawn.empty()) {
-            const uint32 id = playersToRespawn.front();
-            playersToRespawn.pop();
+        //while (!playersToRespawn.empty()) {
+        //    const uint32 id = playersToRespawn.front();
+        //    playersToRespawn.pop();
 
-            const auto fbb = Packet::DespawnPlayerS2C(id);
-            m_Server.BroadCast(fbb.GetBufferPointer(), fbb.GetSize());
+        //    const auto fbb = Packet::DespawnPlayerS2C(id);
+        //    m_Server.BroadCast(fbb.GetBufferPointer(), fbb.GetSize());
 
-            SpawnPlayer(id);
-        }
+        //    SpawnPlayer(id);
+        //}
     }
 
     void
     Server::RemoveLasers() {
         while (!m_LasersToRemove.empty()) {
             uint32 laserId = m_LasersToRemove.front();
-
-            const auto fbb = Packet::DespawnLaserS2C(laserId);
-            m_Server.BroadCast(fbb.GetBufferPointer(), fbb.GetSize());
-
             m_Lasers.erase(laserId);
+            m_DespawnLaserPackets.push(laserId);
 
             m_LasersToRemove.pop();
         }
     }
 
     void
-    Server::SpawnPlayer(const uint32 id) {
+    Server::SpawnPlayer(const EntityId id) {
         auto spawnPoint = m_SpawnPoints.begin();
         for (; spawnPoint != m_SpawnPoints.end(); ++spawnPoint) {
             if (spawnPoint->playerId == id) {
@@ -309,13 +365,9 @@ namespace Game {
             }
         }
 
-        auto ship = m_Players.begin();
-        for (; ship != m_Players.end(); ++ship) {
-            if (ship->second.id == id) {
-                break;
-            }
-        }
+        auto &ship = m_Players[id];
 
+        ship.id = id;
         Transform transform;
         transform.SetPosition(spawnPoint->point);
         const vec3 dirToOrigin = normalize(-spawnPoint->point);
@@ -326,11 +378,9 @@ namespace Game {
         } else {
             Physics::SetTransform(m_PlayerColliders[id], transform.GetMatrix());
         }
-        ship->second.transform = transform;
-        ship->second.linearVelocity = vec3();
-        const auto player = PackPlayer(ship->second);
-        const auto fbb = Packet::SpawnPlayerS2C(&player);
-        m_Server.BroadCast(fbb.GetBufferPointer(), fbb.GetSize());
+        ship.transform = transform;
+        ship.linearVelocity = vec3();
+        m_SpawnPlayerPackets.push(PackPlayer(ship));
     }
 }
 
