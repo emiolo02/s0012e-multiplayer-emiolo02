@@ -50,6 +50,8 @@ namespace Game {
                 LOG("Received connect packet\n");
                 const auto clientConnectS2C = wrapper.AsClientConnectS2C();
                 m_ClientId = clientConnectS2C->uuid;
+                m_ClientTimeZero = m_CurrentTime;
+                m_ServerTimeZero = clientConnectS2C->time;
                 LOG("Received connect packet. uuid is: " << clientConnectS2C->uuid << '\n');
                 break;
             }
@@ -128,7 +130,7 @@ namespace Game {
                 SpaceShip &ship = m_SpaceShips->at(player->uuid());
 
                 //const uint64 latency = std::max(m_CurrentTime - m_LastUpdateTime, m_CurrentTime - updatePlayer->time);
-                ship.SetServerData(*player, m_CurrentTime);
+                ship.SetServerData(*player, m_CurrentTime, player->uuid() == m_ClientId);
                 //LOG(m_CurrentTime << "Receive update player packet.\n");
                 break;
             }
@@ -165,7 +167,9 @@ namespace Game {
                 laser.endTime = laserPacket->end_time();
 
                 // Sync the laser with the server
-                const float dt = float(m_CurrentTime - laserPacket->start_time()) / 1000.0f;
+                const uint64 packetSentTime = laserPacket->start_time() - m_ServerTimeZero;
+                const uint64 packetReceivedTime = m_CurrentTime - m_ClientTimeZero;
+                const float dt = float(packetReceivedTime - packetSentTime) / 1000.0f;
                 laser.Update(dt);
                 break;
             }

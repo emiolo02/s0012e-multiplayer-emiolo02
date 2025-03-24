@@ -88,7 +88,9 @@ struct Time {
     static uint64 Now() {
         const auto now = std::chrono::system_clock::now();
         const auto duration = now.time_since_epoch();
-        return std::chrono::duration_cast<std::chrono::milliseconds>(duration)
+        return std::chrono::duration_cast<std::chrono::milliseconds>(start + duration)
                 .count();
     }
+
+    static std::chrono::milliseconds start;
 };

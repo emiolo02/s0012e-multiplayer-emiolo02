@@ -78,6 +78,7 @@ namespace Game {
     void SpaceShip::Update(const float dt) {
         if (!init) return;
 
+
         const vec3 position = transform.GetPosition();
         const mat4 transformMat = transform.GetMatrix();
         constexpr float thrusterPosOffset = 0.365f;
@@ -139,20 +140,20 @@ namespace Game {
         transform.GetMatrix() *= mat4(quat(vec3(0, 0, rotationZ)));
         this->rotationZ = mix(this->rotationZ, 0.0f, dt * smoothFactor);
 
-        const vec3 &position = transform.GetPosition();
-        const quat &orientation = transform.GetOrientation();
-        const vec3 &lastKnownPosition = *(vec3 *) &serverState.position();
-        const quat &lastKnownDirection = *(quat *) &serverState.direction();
-        const vec3 &lastKnownVelocity = *(vec3 *) &serverState.velocity();
+        //const vec3 &position = transform.GetPosition();
+        //const quat &orientation = transform.GetOrientation();
+        //const vec3 &lastKnownPosition = *(vec3 *) &serverState.position();
+        //const quat &lastKnownDirection = *(quat *) &serverState.direction();
+        //const vec3 &lastKnownVelocity = *(vec3 *) &serverState.velocity();
 
-        // Smoothly blend between client prediction and predicted server data
-        const vec3 latestProjection = lastKnownPosition
-                                      + lastKnownVelocity * timeSinceUpdate;
-        transform.SetPosition(mix(position, latestProjection,
-                                  timeSinceUpdate * distance(position, latestProjection) * 0.5f));
-        transform.SetOrientation(mix(orientation, lastKnownDirection, timeSinceUpdate * 0.1f));
-        //LOG(timeSinceUpdate << '\n');
-        timeSinceUpdate += dt;
+        //// Smoothly blend between client prediction and predicted server data
+        //const vec3 latestProjection = lastKnownPosition
+        //                              + lastKnownVelocity * timeSinceUpdate;
+        //transform.SetPosition(mix(position, latestProjection,
+        //                          timeSinceUpdate * distance(position, latestProjection) * 0.5f));
+        //transform.SetOrientation(mix(orientation, lastKnownDirection, timeSinceUpdate * 0.1f));
+        ////LOG(timeSinceUpdate << '\n');
+        //timeSinceUpdate += dt;
     }
 
     void
@@ -187,7 +188,7 @@ namespace Game {
     }
 
     void
-    SpaceShip::SetServerData(const Protocol::Player &data, const uint64 time) {
+    SpaceShip::SetServerData(const Protocol::Player &data, const uint64 time, const bool reset) {
         if (currentServerUpdate >= time) return;
 
         lastServerUpdate = currentServerUpdate;
@@ -199,11 +200,17 @@ namespace Game {
         timeSinceUpdate = 0.0f;
 
         Interpolate(0.0f);
+
+        if (reset) {
+            float dt = static_cast<float>(Time::Now() - time) / 1000.0f;
+            transform.SetOrientation(*(quat *) &data.direction());
+            velocity = *(vec3 *) &data.velocity();
+            transform.SetPosition(*(vec3 *) &data.position() + velocity * dt);
+        }
     }
 
     void
     SpaceShipState::Update(const float dt) {
-        Debug::DrawDebugText("REAL POSITION", transform.GetPosition(), vec4(1));
         if (input.W()) {
             if (input.Shift())
                 this->currentSpeed = mix(this->currentSpeed, this->boostSpeed, std::min(1.0f, dt * 30.0f));

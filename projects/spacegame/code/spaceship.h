@@ -51,7 +51,7 @@ namespace Game {
 
         void Interpolate(float dt);
 
-        void SetServerData(const Protocol::Player &data, uint64 time);
+        void SetServerData(const Protocol::Player &data, uint64 time, bool reset);
 
         uint32 id = 0;
         Transform transform;

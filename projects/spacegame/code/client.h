@@ -44,5 +44,7 @@ namespace Game {
 
         uint64 m_CurrentTime = 0;
         uint64 m_LastUpdateTime = 0;
+        uint64 m_ClientTimeZero = 0;
+        uint64 m_ServerTimeZero = 0;
     };
 }
