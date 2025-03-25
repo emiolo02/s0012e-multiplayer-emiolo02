@@ -40,38 +40,38 @@ namespace Game {
     }
 
     SpaceShip::~SpaceShip() {
-        delete particleEmitterLeft;
-        delete particleEmitterRight;
+        //delete particleEmitterLeft;
+        //delete particleEmitterRight;
     }
 
     void
     SpaceShip::Init() {
-        constexpr uint32_t numParticles = 2048;
-        const mat4 transformMat = transform.GetMatrix();
-        const vec3 position = transform.GetPosition();
-        this->particleEmitterLeft = new ParticleEmitter(numParticles);
-        this->particleEmitterLeft->data = {
-            .origin = vec4(position + vec3(transformMat[2]) * emitterOffset, 1),
-            .dir = vec4(vec3(-transformMat[2]), 0),
-            .startColor = vec4(0.38f, 0.76f, 0.95f, 1.0f) * 2.0f,
-            .endColor = vec4(0, 0, 0, 1.0f),
-            .numParticles = numParticles,
-            .theta = radians(0.0f),
-            .startSpeed = 1.2f,
-            .endSpeed = 0.0f,
-            .startScale = 0.025f,
-            .endScale = 0.0f,
-            .decayTime = 2.58f,
-            .randomTimeOffsetDist = 2.58f,
-            .looping = 1,
-            .emitterType = 1,
-            .discRadius = 0.020f
-        };
-        this->particleEmitterRight = new ParticleEmitter(numParticles);
-        this->particleEmitterRight->data = this->particleEmitterLeft->data;
+        //constexpr uint32_t numParticles = 2048;
+        //const mat4 transformMat = transform.GetMatrix();
+        //const vec3 position = transform.GetPosition();
+        //this->particleEmitterLeft = new ParticleEmitter(numParticles);
+        //this->particleEmitterLeft->data = {
+        //    .origin = vec4(position + vec3(transformMat[2]) * emitterOffset, 1),
+        //    .dir = vec4(vec3(-transformMat[2]), 0),
+        //    .startColor = vec4(0.38f, 0.76f, 0.95f, 1.0f) * 2.0f,
+        //    .endColor = vec4(0, 0, 0, 1.0f),
+        //    .numParticles = numParticles,
+        //    .theta = radians(0.0f),
+        //    .startSpeed = 1.2f,
+        //    .endSpeed = 0.0f,
+        //    .startScale = 0.025f,
+        //    .endScale = 0.0f,
+        //    .decayTime = 2.58f,
+        //    .randomTimeOffsetDist = 2.58f,
+        //    .looping = 1,
+        //    .emitterType = 1,
+        //    .discRadius = 0.020f
+        //};
+        //this->particleEmitterRight = new ParticleEmitter(numParticles);
+        //this->particleEmitterRight->data = this->particleEmitterLeft->data;
 
-        ParticleSystem::Instance()->AddEmitter(this->particleEmitterLeft);
-        ParticleSystem::Instance()->AddEmitter(this->particleEmitterRight);
+        //ParticleSystem::Instance()->AddEmitter(this->particleEmitterLeft);
+        //ParticleSystem::Instance()->AddEmitter(this->particleEmitterRight);
         init = true;
     }
 
@@ -83,20 +83,20 @@ namespace Game {
         const mat4 transformMat = transform.GetMatrix();
         constexpr float thrusterPosOffset = 0.365f;
 
-        this->particleEmitterLeft->data.origin = vec4(
-            vec3(position + (vec3(transformMat[0]) * -thrusterPosOffset)) + (
-                vec3(transformMat[2]) * emitterOffset), 1);
-        this->particleEmitterLeft->data.dir = vec4(vec3(-transformMat[2]), 0);
-        this->particleEmitterRight->data.origin = vec4(
-            vec3(position + (vec3(transformMat[0]) * thrusterPosOffset)) + (
-                vec3(transformMat[2]) * emitterOffset), 1);
-        this->particleEmitterRight->data.dir = vec4(vec3(-transformMat[2]), 0);
+        //this->particleEmitterLeft->data.origin = vec4(
+        //    vec3(position + (vec3(transformMat[0]) * -thrusterPosOffset)) + (
+        //        vec3(transformMat[2]) * emitterOffset), 1);
+        //this->particleEmitterLeft->data.dir = vec4(vec3(-transformMat[2]), 0);
+        //this->particleEmitterRight->data.origin = vec4(
+        //    vec3(position + (vec3(transformMat[0]) * thrusterPosOffset)) + (
+        //        vec3(transformMat[2]) * emitterOffset), 1);
+        //this->particleEmitterRight->data.dir = vec4(vec3(-transformMat[2]), 0);
 
-        const float speed = length(velocity) / 10.0f * dt;
-        this->particleEmitterLeft->data.startSpeed = 1.2f + (3.0f * speed);
-        this->particleEmitterLeft->data.endSpeed = 0.0f + (3.0f * speed);
-        this->particleEmitterRight->data.startSpeed = 1.2f + (3.0f * speed);
-        this->particleEmitterRight->data.endSpeed = 0.0f + (3.0f * speed);
+        //const float speed = length(velocity) / 10.0f * dt;
+        //this->particleEmitterLeft->data.startSpeed = 1.2f + (3.0f * speed);
+        //this->particleEmitterLeft->data.endSpeed = 0.0f + (3.0f * speed);
+        //this->particleEmitterRight->data.startSpeed = 1.2f + (3.0f * speed);
+        //this->particleEmitterRight->data.endSpeed = 0.0f + (3.0f * speed);
         //this->particleEmitter->data.decayTime = 0.16f;//+ (0.01f  * t);
         //this->particleEmitter->data.randomTimeOffsetDist = 0.06f;/// +(0.01f * t);
     }

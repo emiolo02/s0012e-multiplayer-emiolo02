@@ -61,8 +61,8 @@ namespace Game {
         bool init = false;
 
         float emitterOffset = -0.5f;
-        Render::ParticleEmitter *particleEmitterLeft = nullptr;
-        Render::ParticleEmitter *particleEmitterRight = nullptr;
+        //Render::ParticleEmitter *particleEmitterLeft = nullptr;
+        //Render::ParticleEmitter *particleEmitterRight = nullptr;
 
     private:
         float timeSinceUpdate = 0.0f;
